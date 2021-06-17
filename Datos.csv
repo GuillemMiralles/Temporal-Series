@@ -1,0 +1,44 @@
+Año;Periodo;Número de lanzamientos;Frecha
+2013;Trimestre 1;19.468;2013 - Trimestre 1 
+2013;Trimestre 2;18.077;2013 - Trimestre 2
+2013;Trimestre 3;12.439;2013 - Trimestre 3
+2013;Trimestre 4;17.205;2013 - Trimestre 4
+2014;Trimestre 1;18.485;2014 - Trimestre 1 
+2014;Trimestre 2;18.749;2014 - Trimestre 2
+2014;Trimestre 3;13.341;2014 - Trimestre 3
+2014;Trimestre 4;17.516;2014 - Trimestre 4
+2015;Trimestre 1;18.869;2015 - Trimestre 1 
+2015;Trimestre 2;18.739;2015 - Trimestre 2
+2015;Trimestre 3;13.135;2015 - Trimestre 3
+2015;Trimestre 4;16.616;2015 - Trimestre 4
+2016;Trimestre 1;16.690;2016 - Trimestre 1 
+2016;Trimestre 2;18.402;2016 - Trimestre 2
+2016;Trimestre 3;12.148;2016 - Trimestre 3
+2016;Trimestre 4;15.797;2016 - Trimestre 4
+2017;Trimestre 1;17.055;2017 - Trimestre 1 
+2017;Trimestre 2;16.859;2017 - Trimestre 2
+2017;Trimestre 3;11.581;2017 - Trimestre 3
+2017;Trimestre 4;15.259;2017 - Trimestre 4
+2018;Trimestre 1;15.907;2018 - Trimestre 1 
+2018;Trimestre 2;17.152;2018 - Trimestre 2
+2018;Trimestre 3;11.547;2018 - Trimestre 3
+2018;Trimestre 4;15.065;2018 - Trimestre 4
+2019;Trimestre 1;15.544;2019 - Trimestre 1 
+2019;Trimestre 2;14.677;2019 - Trimestre 2
+2019;Trimestre 3;10.173;2019 - Trimestre 3
+2019;Trimestre 4;13.612;2019 - Trimestre 4
+2020;Trimestre 1;9.659;
+;;;
+;;;
+"Métrica:""Número de lanzamientos""";;;
+"Fuente:""CGPJ""";;;
+"Clasificación:""""";;;
+"Unidad:""Número de lanzamientos""";;;
+"Escala:""Unidades""";;;
+"EscalaFactorPotencia10:""0""";;;
+"SonDatosNumericos:""True""";;;
+;;;
+;;;
+"Url:""https://www.epdata.es/evolucion-numero-desahucios-espana/d9fa8a1c-02f6-42ae-b974-5ac3527f7d26""";;;
+"Titulo:""Evolución del número de desahucios en España""";;;
+"Subtitulo:""""";;;

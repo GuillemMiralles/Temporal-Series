@@ -1,0 +1,341 @@
+---
+title: "SERIES TEMPORALES - Deshaucis"
+author: "Guillem Miralles - Miguel Payà"
+date: "29/9/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Serie con estacionalidad:
+
+```{r}
+#LECTURA DEL FICHERO:
+library(readr)
+DBDesahucios <- read_delim("Datos.csv", ";", escape_double = FALSE, 
+    trim_ws = TRUE)
+
+#SELECCIONAMOS LOS DATOS
+DBDesahucios <- DBDesahucios[1:28,]
+#Vamos a eliminar el 1er trimestre de 2020 ya que al no estar todos los trimestres, no nos interesa
+names (DBDesahucios) = c("Anyo", "Periodo", "Desahucios","Fecha")
+head(DBDesahucios)
+```
+
+
+### 1.Análisis descriptivo:
+```{r}
+#Vamos a realizar una estadistica descriptiva de los datos:
+attach(DBDesahucios)
+max(Desahucios)
+min(Desahucios)
+
+library(ggplot2)
+theme_set(theme_bw())
+
+# Draw plot
+g1 <- ggplot(DBDesahucios, aes(x=Anyo, y=Desahucios)) + 
+  geom_bar(stat="identity", width=.5, fill="lightcoral") + 
+  labs(title="Desahucios por Año", 
+       subtitle="España", 
+       caption="Fuente: INE") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+g1
+
+# Draw plot
+g2 <- ggplot(DBDesahucios, aes(x=Periodo, y=Desahucios)) + 
+  geom_bar(stat="identity", width=.5, fill="steelblue") + 
+  labs(title="Desahucios por Periodo", 
+       subtitle="España", 
+       caption="Fuente: INE") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+g2
+```
+```{r}
+g3 <- ggplot(DBDesahucios, aes(x=Fecha, y=Desahucios)) +
+  geom_bar(stat="identity", width=.5, fill=Anyo) + 
+  labs(title="Desahucios por Periodo", 
+       subtitle="España", 
+       caption="Fuente: INE") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+g3
+
+```
+
+#### Vamos a valorar la estacionalidad de la serie:
+
+
+
+
+```{r}
+library(ggplot2)
+ggplot(data = DBDesahucios, aes(x=Fecha, y=Desahucios, group = 1)) + geom_line() +
+         geom_point() + 
+  labs(title="Desahucios por Periodo", 
+       subtitle="España", 
+       caption="Fuente: INE") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+```
+
+```{r}
+
+ggplot(data = DBDesahucios) + geom_boxplot(aes(x=Periodo, y=Desahucios)) + 
+  labs(title="Desahucios por Periodo", 
+       subtitle="España", 
+       caption="Fuente: INE") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+```
+
+- En esta serie se observa claramente que hay un patrón similar que se repite año tras año. En el diagrama de cajas vemos como el tercer trimestre se produce una bajada de los deshacuios, mientras que en el segundo se alcanza el nivel mas alto.
+
+
+## Modelo Holt-Winters:
+
+Vamos a aplicar un Suavizado exponencial triple, un modelo de Holt-Winters para poder incluir la estacionalidad en el modelo. Tenemos dos principales modelos, dependiendo del tipo de estacionalidad:
+
+ - El modelo aditivo estacional: Un modelo de datos en el que los efectos de los factores individuales se diferencian y se agrupan para modelar los datos. Un modelo aditivo es opcional para los procedimientos de descomposición y para el método de Winters.
+ 
+ - El modelo multiplicativo estacional: Este modelo presupone que a medida que se incrementan los datos, también se incrementa el patrón estacional. La mayoría de las gráficas de series de tiempo muestran este patrón. En este modelo, la tendencia y los componentes de estación se multiplican y luego se suman al componente de error.
+ 
+
+- *El modelo aditivo estacional*:
+
+$\hat{x}_t = L_{t-1}+T_{t-1}+S_{t-c}$
+
+
+```{r}
+
+attach(DBDesahucios)
+
+Desahucios_ts <- ts(Desahucios,start=c(2013,1),end=c(2019,4),frequency=4) 
+insample <- window(Desahucios_ts,start=c(2013,1),end=c(2018,4))  
+      # ajuste desde (2013,1) hasta 2018,4
+outsample <- window(Desahucios_ts,start=c(2019,1),end=c(2019,4)) 
+      # utilizamos 2019 para valorar predicción
+
+#Aditiva: 
+
+fitDesahucios_aditivo <- HoltWinters(insample,seasonal="additive")
+fitDesahucios_aditivo$coefficients
+```
+
+```{r}
+#Parámetros del modelo
+fitDesahucios_aditivo$alpha
+
+fitDesahucios_aditivo$beta
+
+fitDesahucios_aditivo$gamma
+```
+
+```{r}
+fitval_aditivo <- fitted(fitDesahucios_aditivo)
+fitval_aditivo
+```
+
+```{r}
+plot(fitDesahucios_aditivo,ylab="Deshaucios por trimesre España")
+```
+```{r}
+# Valoramos la bondad del ajuste
+insamplecut <- window(insample,start=c(2014,1),end=c(2018,4))
+rmse <- sqrt(mean((insamplecut-fitval_aditivo[,1])^2))
+rmse
+
+sqrt(fitDesahucios_aditivo$SSE/length(fitval_aditivo[,1]))
+
+mape <- 100*mean(abs(insamplecut-fitval_aditivo[,1])/insamplecut)
+mape
+
+```
+```{r}
+# Predicción para el año 2019
+pred <- predict(fitDesahucios_aditivo,4)
+outsample;pred
+
+ts.plot(insample,pred,lty=1:2)
+```
+```{r}
+# Valoramos la capacidad predictiva del método
+
+rmse_pred <- sqrt(mean((outsample-pred)^2))
+rmse_pred
+
+mape_pred <- 100*mean(abs(outsample-pred)/outsample)
+mape_pred
+
+#Estos valores nos seran de gran utilidad a la hora de comparar modelos y ver cuál es mejor.
+```
+
+Ahora vamos a ver los resultados con el *modelo multiplicativo estacional* y luego veremos si mejora el modelo respecto al aditivo estacional.
+
+```{r}
+attach(DBDesahucios)
+
+Desahucios_ts <- ts(Desahucios,start=c(2013,1),end=c(2019,4),frequency=4) 
+insample <- window(Desahucios_ts,start=c(2013,1),end=c(2018,4))  
+      # ajuste desde (2013,1) hasta 2018,4
+outsample <- window(Desahucios_ts,start=c(2019,1),end=c(2019,4)) 
+      # utilizamos 2019 para valorar predicción
+
+#multiplicativo: 
+
+fitDesahucios_multiplicativo <- HoltWinters(insample,seasonal="multiplicative")
+fitDesahucios_multiplicativo$coefficients
+
+fitDesahucios_multiplicativo$alpha
+
+fitDesahucios_multiplicativo$beta
+
+fitDesahucios_multiplicativo$gamma
+
+fitval_multiplicativo <- fitted(fitDesahucios_multiplicativo)
+fitval_multiplicativo
+
+
+plot(fitDesahucios_multiplicativo,ylab="Deshaucios por trimesre España")
+
+# Valoramos la bondad del ajuste
+insamplecut <- window(insample,start=c(2014,1),end=c(2018,4))
+rmse <- sqrt(mean((insamplecut-fitval_multiplicativo[,1])^2))
+rmse
+
+sqrt(fitDesahucios_multiplicativo$SSE/length(fitval_multiplicativo[,1]))
+
+mape <- 100*mean(abs(insamplecut-fitval_multiplicativo[,1])/insamplecut)
+mape
+
+# Predicción para el año 2019
+pred <- predict(fitDesahucios_multiplicativo,4)
+outsample;pred
+
+ts.plot(insample,pred,lty=1:2)
+
+# Valoramos la capacidad predictiva del método
+
+rmse_pred <- sqrt(mean((outsample-pred)^2))
+rmse_pred
+
+mape_pred <- 100*mean(abs(outsample-pred)/outsample)
+mape_pred
+```
+ 
+
+#### Valoración:
+
+- Vemos que el modelo multiplicativo nos ofrece una menor tasa de error respecto al aditivo. Vemos que el RMSE del multiplicativo es de 1.314907 y la del aditivo de 1.4098, como vemos, un poco menor la del multiplicativo. También ocurre lo mismo en el MAPE. Entonces, selecciono el modelo multiplicativo estacional.
+
+```{r}
+library(forecast)
+checkresiduals(fitDesahucios_multiplicativo)
+#Vemos que los residuos estan dentro de nuestro modelo, no hay picos en la gràfica que nos generen puntas en el histograma (colas más pesadas). Por lo que el modelo esta bastante bien.
+```
+
+
+## Análisis con el método sARIMA
+
+```{r}
+Desahucios_ts <- ts(Desahucios,start=c(2013,1),end=c(2019,4),frequency=4) 
+insample <- window(Desahucios_ts,start=c(2013,1),end=c(2018,4))  
+      # ajuste desde (2013,1) hasta 2018,4
+outsample <- window(Desahucios_ts,start=c(2019,1),end=c(2019,4)) 
+      # utilizamos 2019 para valorar predicción
+
+dbdes <- diff(insample) # Serie diferenciada una vez
+plot(dbdes,type="l")
+```
+
+Hemos quitado la tendencia con la diferencia regular, pero aún queda la estacionalidad.
+
+```{r}
+ddcDes <- diff(dbdes,12) # Diferencia estacional
+plot(ddcDes,type="l")
+```
+La serie diferenciada con d=1 es una serie estacionaria, pero usando una d=12 la serie deja de ser estacionaria. Pasamos pues a examinar el correlograma y correlograma parcial:
+
+```{r}
+acf(dbdes,lag.max=50)
+pacf(dbdes,lag.max=50)
+```
+Vamos a seleccionar de manera automática el modelo (s)ARIMA que mejor se ajusta a la serie temporal de estudio con la función auto.arima:
+
+```{r}
+des_sarima <- auto.arima(insample)
+des_sarima
+accuracy(des_sarima)
+checkresiduals(des_sarima,plot=TRUE)
+```
+
+En el checkresiduals podemos comprovar que no hace falta crear un modelo GARCH o ARCH donde se crearia un modelo que explicara la varianza residual. Obtenemos buenos resultados.
+```{r}
+pred <- forecast(des_sarima,h=5)$mean
+pred
+plot(forecast(des_sarima,h=5))
+```
+
+Vemos que las predicciones del modelo son bueno.
+
+```{r}
+rmse_pred <- sqrt(mean((outsample-pred)^2))
+rmse_pred
+
+mape_pred <- 100*mean(abs(outsample-pred)/outsample)
+mape_pred
+```
+
+Vemos que con este modelo la mejora respecto a les de Holt-Winters es bastante. Mejora los errores de las predicciones. Ahora mismo, es el mejor modelo. Pero vamos a ver que pasa si utilizamos una red neuronal para hacer las predicciones:
+
+
+## Modelo NAR: Red neuronal autorregresiva no lineal
+
+- Entre los modelos no lineales que se han propuesto encontramos, por ejemplo, las redes neuronales autorregresivas (neural network autoregression, NNAR), también conocidas como modelos autorregresivos no lineales (nonlinear autoregressive, NAR
+
+```{r}
+attach(DBDesahucios)
+library(forcats)
+Desahucios_ts <- ts(Desahucios,start=c(2013,1),end=c(2019,4),frequency=4) 
+insample <- window(Desahucios_ts,start=c(2013,1),end=c(2018,4))  
+      # ajuste desde (2013,1) hasta 2018,4
+outsample <- window(Desahucios_ts,start=c(2019,1),end=c(2019,4)) 
+      # utilizamos 2019 para valorar predicción
+
+fit.nar <- nnetar(insample)
+fit.nar
+
+accuracy(fit.nar)
+
+fitval <- fitted.values(fit.nar)
+
+plot(WWWusage,xlab="Minuto",ylab="Usuarios conectados")
+lines(fitval, col="blue")
+abline(v=95)
+
+pred <- forecast(fit.nar,h=5)  # Predicción puntual para h = 5
+plot(pred)
+#Vemos que las predicciones son casi perfectas.
+#Veamos los errores:
+rmse_pred <- sqrt(mean((outsample - pred$mean)^2))
+rmse_pred
+
+pred <- forecast(fit.nar, PI = TRUE, h=8)  # Predicción puntual e intervalos de predicción
+plot(pred)
+
+
+```
+```{r}
+accuracy(fit.nar)
+checkresiduals(fit.nar,plot=TRUE) #Vemos que los residuos estan bastante bien ajustados.
+```
+
+## Conclusión: 
+
+- Podemos afirmar que la red neuronal, modelo NAR, es la que mejor predice. Obteniendo un RMSE que es, mas de la mitad menor que en en los modelos de Holt-Winter, y un MAPE que esta muy por debajo de los otros modelos. Podemos ver que con un modelo (s)ARIMA también obtenemos unos muy buenos resultados. Podemos ordenar los modelos segun su bondad:
+
+  1. NAR
+  2. (s)ARIMA
+  3. Holt-Winter multiplicativo
+  4. Holt-Winter aditivo

@@ -1,0 +1,138 @@
+---
+title: "SERIES TEMPORALES - Salaris"
+author: "Guillem Miralles - Miguel Payà"
+date: "29/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Especificamos las librerías necesarias en esta lista
+
+packages = c("tidyverse","knitr","matlib","pracma","readr","haven","stats4","fitdistrplus","vcd","FNN","ISLR","MASS","dplyr","faraway","car","leaps","boot","pROC","nnet","class","glmnet","pls","plotly","ggplot2","readxl")
+
+#use this function to check if each package is on the local machine
+#if a package is installed, it will be loaded
+#if any are not, the missing package(s) will be installed and loaded
+package.check <- lapply(packages, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE)
+    library(x, character.only = TRUE)
+  }
+})
+
+#verify they are loaded
+search()
+
+```
+
+```{r}
+dbsalaries <- read_csv("salaries_1985to2018.csv", 
+    col_types = cols(salary = col_integer(), 
+        season_end = col_skip(), season_start = col_skip()))
+
+dbsalaries$salary[is.na(dbsalaries$salary)] = 0
+View(dbsalaries)
+```
+
+```{r}
+
+dbsal <- dbsalaries %>%
+  group_by(., season) %>%
+  summarise(sal_seson = sum(salary)/30)
+
+summary(dbsal)
+dbsal %>% filter(sal_seson == min(sal_seson))
+dbsal %>% filter(sal_seson == max(sal_seson))
+
+```
+
+```{r}
+
+ggplot(data = dbsal, aes(season, sal_seson, group = 1)) + geom_line() +
+  geom_point()+
+    labs(title="Salario NBA por Temporada", 
+       subtitle="Total") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+
+
+ggplot(data = dbsal,mapping = aes(x=reorder(season,sal_seson),y=season)) + geom_bar(stat = "identity",fill='darkblue')+
+    labs(title="Salario NBA por Temporada", 
+       subtitle="Total") + 
+  theme(axis.text.x = element_text(angle=90, vjust=0.6))
+```
+
+Ya que esta serie temporal presenta tendencia pero no estacionalidad, vamos a aplicar el método de Hold ya que es el que más nos interesa dada nuestra serie temporal.
+
+
+```{r}
+attach(dbsal)
+
+sal_season_ts <- ts(sal_seson, start= 1984, end = 2017)
+insample <- window(sal_season_ts, start=1984, end=2012) 
+
+      # aserie temporal desde 1984 hasta 2017
+outsample <- window(sal_season_ts,start=2013, end=2017)
+
+      # utilizamos los últimos 5 años como predicción
+n <- length(insample)
+fitSalaries <- HoltWinters(insample,gamma=FALSE)
+
+fitSalaries$coefficients
+fitSalaries$alpha
+fitSalaries$beta
+```
+```{r}
+
+fitval <- fitted(fitSalaries)
+fitval
+#Obtenemos el modelo entrenado de nuestra serie temporal de entrenamiento, para poder obtener información de como se están prediciendo los valores según este conjunto de entrenamiento.
+```
+
+```{r}
+plot(fitSalaries)
+
+#AL realizar el plot apreciamos que se realiza un buen estudio de nuestra serie temporal
+```
+```{r}
+
+
+rmse <- sqrt(mean((insample[3:n]-fitval[,1])^2))
+rmse
+sqrt(fitSalaries$SSE/length(fitval[,1]))
+
+mape <- 100*mean(abs(insample[3:n]-fitval[,1])/insample)
+mape
+```
+
+```{r}
+pred <- predict(fitSalaries,5)
+outsample;pred
+ts.plot(insample,pred,lty=1:2)
+#Realizamos la predicción para los siguientes 5 años y la comparamos con la serie temporal real en los mismos años.
+
+ts.plot(sal_season_ts)
+#Se puede apreciar como en nuestra predicción, los valores no ascienden como en los valores reales, esto es debido a que en estos años aumentó considerablemente el valor de los salarios en la NBA.
+```
+```{r}
+rmse_pred <- sqrt(mean((outsample-pred)^2))
+rmse_pred
+
+mape_pred <- 100*mean(abs(outsample-pred)/outsample)
+mape_pred
+```
+```{r}
+acf(difST1)
+pacf(difST1)
+
+```
+
+
+
+```{r}
+
+```
+
